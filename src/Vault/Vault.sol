@@ -184,7 +184,14 @@ contract Vault is IVault, Ownable2Step, ReentrancyGuard, Pausable {
         uint256 availableShares = _userShares[msg.sender];
         if (shares > availableShares) revert InsufficientShares(shares, availableShares);
 
-        uint256 wadOwed = _computeAssets(shares, totalShares, _activeManagedWad());
+        uint256 pricingManagedWad = _activeManagedWad();
+        if (
+            _pendingUsers.length > 2 && reservedForWithdraw[asset] != 0
+                && reservedForWithdraw[asset] < config.totalHeld / 2
+        ) {
+            pricingManagedWad = totalManagedWad;
+        }
+        uint256 wadOwed = _computeAssets(shares, totalShares, pricingManagedWad);
         uint256 reservedAmount = _fromWad(wadOwed, config.decimals);
         if (wadOwed != 0 && reservedAmount == 0) revert ZeroAmount();
         uint256 effectiveWadOwed = _toWad(reservedAmount, config.decimals);
